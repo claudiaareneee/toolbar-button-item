@@ -33,7 +33,7 @@ export class ToolbarButtonProvider implements UiItemsProvider {
   /** provideToolbarButtonItems() is called for each registered UI provider as the Frontstage is building toolbars. We are adding an action button to the ContentManipulation Horizontal toolbar
    * in General use Frontstages. For more information, refer to the UiItemsProvider and Frontstage documentation on imodeljs.org.
    */
-  public provideToolbarItems(_stageId: string, stageUsage: string, toolbarUsage: ToolbarUsage, toolbarOrientation: ToolbarOrientation): ToolbarItem[] {
+  public provideToolbarButtonItems(_stageId: string, stageUsage: string, toolbarUsage: ToolbarUsage, toolbarOrientation: ToolbarOrientation): ToolbarItem[] {
     if (stageUsage === StageUsage.General && toolbarUsage === ToolbarUsage.ContentManipulation && toolbarOrientation === ToolbarOrientation.Horizontal) {
       const toolbarItem = ToolbarHelper.createToolbarItemFromItemDef(1000,
         new CommandItemDef({ commandId: "Open message box", iconSpec: <SvgLightbulbHollow />, label: "Added Tool", execute: () => startTool() })

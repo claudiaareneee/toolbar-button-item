@@ -3,6 +3,7 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import {
+  BrowserAuthorizationCallbackHandler,
   BrowserAuthorizationClient,
   BrowserAuthorizationClientConfiguration
 } from "@itwin/browser-authorization";
@@ -10,9 +11,12 @@ import {
 // This is a thin wrapper class on BrowserAuthorizationClient to validate OIDC configuration
 class SandboxAuthorizationClient extends BrowserAuthorizationClient {
 
+  private authConfig: BrowserAuthorizationClientConfiguration;
+
   constructor(configuration: BrowserAuthorizationClientConfiguration) {
     super(configuration);
     this.validateConfiguration(configuration);
+    this.authConfig = configuration;
   }
 
   private validateConfiguration(configuration: BrowserAuthorizationClientConfiguration) {
@@ -33,7 +37,7 @@ class SandboxAuthorizationClient extends BrowserAuthorizationClient {
   // Sandbox accomplish authorization in the background before executing the code, therefore signIn gets already available token from the localStore cache.
   // Full interactive sign-in flow kicks in if you export the project from the Sandbox and run it locally.
   public async signIn() {
-    return super.handleSigninCallback()
+    return BrowserAuthorizationCallbackHandler.handleSigninCallback(this.authConfig.redirectUri)
       .then(async () => super.signIn())
       .catch((error) => console.error(error));
   }

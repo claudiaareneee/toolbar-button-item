@@ -3,7 +3,7 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import React from "react";
-import { StagePanelLocation, StagePanelSection, UiItemsProvider, Widget, WidgetState } from "@itwin/appui-react";
+import { StagePanelLocation, StagePanelSection, UiItemsProvider, CommonWidgetProps, WidgetState } from "@itwin/appui-react";
 import { Alert } from "@itwin/itwinui-react";
 
 export const InstructionsWidget = () => {
@@ -17,15 +17,15 @@ export const InstructionsWidget = () => {
 export class InstructionsWidgetProvider implements UiItemsProvider {
   public readonly id: string = "ToolbarButtonInstructionsWidgetProvider";
 
-  public provideWidgets(_stageId: string, _stageUsage: string, location: StagePanelLocation, _section?: StagePanelSection): ReadonlyArray<Widget> {
-    const widgets: Widget[] = [];
+  public provideWidgets(_stageId: string, _stageUsage: string, location: StagePanelLocation, _section?: StagePanelSection): ReadonlyArray<CommonWidgetProps> {
+    const widgets: CommonWidgetProps[] = [];
     if (location === StagePanelLocation.Bottom && _section === StagePanelSection.Start) {
       widgets.push(
         {
           id: "ToolbarButtonInstructionsWidget",
           label: "Instructions",
           defaultState: WidgetState.Open,
-          content: <InstructionsWidget />,
+          getWidgetContent: () => <InstructionsWidget />,
         });
     }
     return widgets;

@@ -4,42 +4,42 @@
 *--------------------------------------------------------------------------------------------*/
 import { Id64, Id64Array, Id64Set, Id64String } from "@itwin/core-bentley";
 import { Matrix3d } from "@itwin/core-geometry";
-import { ColorDef, Environment, PlanarClipMaskMode, PlanarClipMaskSettings } from "@itwin/core-common";
+import { ColorDef, Environment, PlanarClipMaskMode, PlanarClipMaskSettings, QueryRowFormat } from "@itwin/core-common";
 import { DrawingViewState, IModelConnection, SpatialViewState, ViewState } from "@itwin/core-frontend";
 
-const metroStationImodelName = "DRWR04-S3";
+const metroStationIModelName = "DRWR04-S3";
 export class ViewSetup {
   /** Queries for and loads the default view for an iModel. */
-  public static getDefaultView = async (imodel: IModelConnection): Promise<ViewState> => {
-    const viewId = await ViewSetup.getFirstViewDefinitionId(imodel);
+  public static getDefaultView = async (iModel: IModelConnection): Promise<ViewState> => {
+    const viewId = await ViewSetup.getFirstViewDefinitionId(iModel);
 
     // Load the view state using the viewSpec's ID
-    const viewState = await imodel.views.load(viewId);
+    const viewState = await iModel.views.load(viewId);
 
     // Making some improvements to the default views.
-    await ViewSetup.overrideView(imodel, viewState);
+    await ViewSetup.overrideView(iModel, viewState);
 
     return viewState;
   };
 
-  /** Pick the first available spatial view definition in the imodel */
-  private static async getFirstViewDefinitionId(imodel: IModelConnection): Promise<Id64String> {
+  /** Pick the first available spatial view definition in the iModel */
+  private static async getFirstViewDefinitionId(iModel: IModelConnection): Promise<Id64String> {
     // Return default view definition (if any)
-    const defaultViewId = await imodel.views.queryDefaultViewId();
+    const defaultViewId = await iModel.views.queryDefaultViewId();
     if (Id64.isValid(defaultViewId))
       return defaultViewId;
 
     // Return first spatial view definition (if any)
-    const spatialViews: IModelConnection.ViewSpec[] = await imodel.views.getViewList({ from: SpatialViewState.classFullName });
+    const spatialViews: IModelConnection.ViewSpec[] = await iModel.views.getViewList({ from: SpatialViewState.classFullName });
     if (spatialViews.length > 0)
       return spatialViews[0].id;
 
     // Return first drawing view definition (if any)
-    const drawingViews: IModelConnection.ViewSpec[] = await imodel.views.getViewList({ from: DrawingViewState.classFullName });
+    const drawingViews: IModelConnection.ViewSpec[] = await iModel.views.getViewList({ from: DrawingViewState.classFullName });
     if (drawingViews.length > 0)
       return drawingViews[0].id;
 
-    throw new Error("No valid view definitions in imodel");
+    throw new Error("No valid view definitions in iModel");
   }
 
   /** Returns the aspect ration of the container the view will be created in. */
@@ -53,7 +53,7 @@ export class ViewSetup {
   }
 
   /** Makes ascetic changes to the default view */
-  public static async overrideView(imodel: IModelConnection, viewState: ViewState) {
+  public static async overrideView(iModel: IModelConnection, viewState: ViewState) {
     const aspect = ViewSetup.getAspectRatio();
     if (undefined !== aspect) {
       viewState.adjustAspectRatio(aspect);
@@ -66,7 +66,7 @@ export class ViewSetup {
       const displayStyle = viewState3d.getDisplayStyle3d();
 
       displayStyle.changeBackgroundMapProps({ useDepthBuffer: true });
-      const groundBias: number | undefined = ViewSetup.getGroundBias(imodel);
+      const groundBias: number | undefined = ViewSetup.getGroundBias(iModel);
       if (groundBias) {
         displayStyle.changeBackgroundMapProps({ groundBias });
       }
@@ -82,9 +82,9 @@ export class ViewSetup {
       });
 
       // Enable model masking on the metrostation model.
-      if (imodel.name === "Metrostation2" || imodel.name === metroStationImodelName) {
-        const modelIds = await ViewSetup.getModelIds(imodel);
-        const subCategoryIds = await this.getSubCategoryIds(imodel, "S-SLAB-CONC");
+      if (iModel.name === "Metrostation2" || iModel.name === metroStationIModelName) {
+        const modelIds = await ViewSetup.getModelIds(iModel);
+        const subCategoryIds = await this.getSubCategoryIds(iModel, "S-SLAB-CONC");
         let planarClipMaskSettings = PlanarClipMaskSettings.create({ subCategoryIds, modelIds });
         planarClipMaskSettings = planarClipMaskSettings.clone({ mode: PlanarClipMaskMode.IncludeSubCategories });
         displayStyle.changeBackgroundMapProps({
@@ -96,14 +96,14 @@ export class ViewSetup {
     if (viewState.isSpatialView()) {
       const displayStyle = viewState.getDisplayStyle3d();
       // Enable model masking on the Stadium model.
-      if (imodel.name === "Stadium") {
-        const modelsForMasking = await ViewSetup.getModelIds(imodel, "SS_MasterLandscape.dgn, LandscapeModel");
+      if (iModel.name === "Stadium") {
+        const modelsForMasking = await ViewSetup.getModelIds(iModel, "SS_MasterLandscape.dgn, LandscapeModel");
 
         displayStyle.changeBackgroundMapProps({
           planarClipMask: PlanarClipMaskSettings.create({ modelIds: modelsForMasking }).toJSON(),
           transparency: 0.01, // Temporary fix due to how the planar clip and transparency interact.
         });
-        const excludedModelIds = await ViewSetup.getModelIds(imodel,
+        const excludedModelIds = await ViewSetup.getModelIds(iModel,
           "SS_Master",
           "SS_Master_Structural.dgn, 3D Metric Design",
           "LandscapeDetails.dgn, 3D Metric Design",
@@ -113,11 +113,11 @@ export class ViewSetup {
       }
 
       // Enable most models on DRWR04-S3 model
-      if (imodel.name === metroStationImodelName) {
-        const modelIds = await ViewSetup.getModelIds(imodel);
+      if (iModel.name === metroStationIModelName) {
+        const modelIds = await ViewSetup.getModelIds(iModel);
         modelIds.forEach((id) => viewState.modelSelector.addModels(id));
 
-        const modelsForDropping = await ViewSetup.getModelIds(imodel, "Geotechnical Investigation, DRWR04-GEO-00-XX-M3-G-00001.dgn, 3d");
+        const modelsForDropping = await ViewSetup.getModelIds(iModel, "Geotechnical Investigation, DRWR04-GEO-00-XX-M3-G-00001.dgn, 3d");
         modelsForDropping.forEach((id) => viewState.modelSelector.dropModels(id));
 
         // Change camera
@@ -127,30 +127,29 @@ export class ViewSetup {
       }
     }
 
-    const shownCategories = await ViewSetup.getShownCategories(imodel);
+    const shownCategories = await ViewSetup.getShownCategories(iModel);
     if (shownCategories)
       viewState.categorySelector.addCategories(shownCategories);
 
-    const hiddenCategories = await ViewSetup.getHiddenCategories(imodel);
+    const hiddenCategories = await ViewSetup.getHiddenCategories(iModel);
     if (hiddenCategories)
       viewState.categorySelector.dropCategories(hiddenCategories);
   }
 
   /** Returns a set of every model's id in the iModel. */
   public static async getModelIds(iModel: IModelConnection, ...modelNames: string[]): Promise<Id64Set> {
-    const ids = new Set<string>();
     if (!iModel.isClosed) {
       const query = `SELECT ECInstanceId FROM Bis:PhysicalPartition${modelNames.length > 0 ? ` WHERE codeValue IN ('${modelNames.join("','")}')` : ""}`;
-      for await (const row of iModel.createQueryReader(query)) {
-        ids.add(row[0]);
-      }
+
+      const result = await iModel.createQueryReader(query, undefined, { rowFormat: QueryRowFormat.UseJsPropertyNames, }).toArray();
+      return new Set<string>(result.map(row => row.id));
     }
-    return ids;
+
+    return new Set<string>();
   }
 
   /** Returns a set of every sub category in the specified category codes. */
   public static async getSubCategoryIds(iModel: IModelConnection, ...categoryCodes: string[]): Promise<Id64Set> {
-    const subcategoriesIds = new Set<string>();
     if (!iModel.isClosed) {
       const selectSubCategories = `SELECT ECInstanceId as id
                                     FROM BisCore.SubCategory
@@ -159,55 +158,52 @@ export class ViewSetup {
                                       FROM BisCore.SpatialCategory
                                       ${categoryCodes.length > 0 ? `WHERE CodeValue IN ('${categoryCodes.join("','")}')` : ""})`;
 
-      for await (const row of iModel.createQueryReader(selectSubCategories)) {
-        subcategoriesIds.add(row[0]);
-      }
+      const result = await iModel.createQueryReader(selectSubCategories, undefined, { rowFormat: QueryRowFormat.UseJsPropertyNames, }).toArray();
+      return new Set<string>(result.map(row => row.id));
     }
-    return subcategoriesIds;
+    return new Set<string>();;
   }
 
   /** Queries for categories that are unnecessary in the context of the of the sample showcase. */
-  private static getHiddenCategories = async (imodel: IModelConnection): Promise<Id64Array | undefined> => {
-    const ids: Id64String[] = [];
+  private static getHiddenCategories = async (iModel: IModelConnection): Promise<Id64Array | undefined> => {
     const addIdsByCategory = async (...categoryCodes: string[]) => {
-      if (!imodel.isClosed) {
+      if (!iModel.isClosed) {
         const selectInCategories = `SELECT ECInstanceId FROM bis.Category WHERE CodeValue IN ('${categoryCodes.join("','")}')`;
-        for await (const row of imodel.createQueryReader(selectInCategories))
-          ids.push(row.id);
+        const result = await iModel.createQueryReader(selectInCategories, undefined, { rowFormat: QueryRowFormat.UseJsPropertyNames, }).toArray();
+        return result.map(row => row.id);
       }
     };
-    if (imodel.name === "house bim upload")
+    if (iModel.name === "house bim upload")
       // The callout graphics in the house model are ugly - don't display them.
-      await addIdsByCategory("Callouts");
+      return await addIdsByCategory("Callouts");
 
-    if (imodel.name === "Metrostation2" || imodel.name === metroStationImodelName)
+    if (iModel.name === "Metrostation2" || iModel.name === metroStationIModelName)
       // There is coincident geometry. Remove the more visible instances.
-      await addIdsByCategory("A-FLOR-OTLN", "A-Reserved Retail Area", "G-ANNO-SYMB", "A-SITE", "S-BEAM-CONC");
+      return await addIdsByCategory("A-FLOR-OTLN", "A-Reserved Retail Area", "G-ANNO-SYMB", "A-SITE", "S-BEAM-CONC");
 
-    return ids;
+    return [];
   };
 
-  private static getShownCategories = async (imodel: IModelConnection): Promise<Id64Array | undefined> => {
-    const ids: Id64String[] = [];
+  private static getShownCategories = async (iModel: IModelConnection): Promise<Id64Array | undefined> => {
     const addIdsByCategory = async () => {
-      if (!imodel.isClosed) {
+      if (!iModel.isClosed) {
         const selectInCategories = `SELECT ECInstanceId FROM bis.Category`;
-        for await (const row of imodel.createQueryReader(selectInCategories))
-          ids.push(row.id);
+        const result = await iModel.createQueryReader(selectInCategories, undefined, { rowFormat: QueryRowFormat.UseJsPropertyNames, }).toArray();
+        return (result.map(row => row.id));
       }
     };
-    if (imodel.name === metroStationImodelName)
-      await addIdsByCategory();
+    if (iModel.name === metroStationIModelName)
+      return addIdsByCategory();
 
-    return ids;
+    return [];
   };
 
   /*
   * groundBias can be stored in Product Settings Service. This method retrieves it.
   */
-  public static getGroundBias(imodel: IModelConnection): number | undefined {
-    if (imodel.name === metroStationImodelName)
-      if (imodel.geographicCoordinateSystem?.verticalCRS?.id === "GEOID")
+  public static getGroundBias(iModel: IModelConnection): number | undefined {
+    if (iModel.name === metroStationIModelName)
+      if (iModel.geographicCoordinateSystem?.verticalCRS?.id === "GEOID")
         return -31.39;
       else
         return 3;
